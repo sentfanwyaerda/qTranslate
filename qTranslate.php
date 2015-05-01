@@ -9,9 +9,9 @@ class qTranslate{
 	var $settings = array();
 	
 	function qTranslate(){}
-	function parse($str){
+	function parse($str, $l=NULL){
 		$blocks = qTranslate::blocks($str, NULL);
-		$l = qTranslate::get_language();
+		if($l != NULL){ $l = qTranslate::get_language(); }
 		$result = NULL;
 		foreach($blocks as $i=>$obj){
 			if(!isset($obj['language']) || $obj['language'] == $l){ $result .= $obj['block']; }
