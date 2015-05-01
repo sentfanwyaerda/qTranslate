@@ -11,7 +11,7 @@ class qTranslate{
 	function qTranslate(){}
 	function parse($str, $l=NULL){
 		$blocks = qTranslate::blocks($str, NULL);
-		if($l != NULL){ $l = qTranslate::get_language(); }
+		if($l === NULL){ $l = qTranslate::get_language(FALSE); }
 		$result = NULL;
 		foreach($blocks as $i=>$obj){
 			if(!isset($obj['language']) || $obj['language'] == $l){ $result .= $obj['block']; }
@@ -20,7 +20,7 @@ class qTranslate{
 	}
 	function set_language($l){
 		if(isset($this) && isset($this->language)){ $this->language = $l; }
-		@session_start();
+		session_start();
 		$_SESSION['language'] = $l;
 	}
 	function enable_language($l){}
@@ -44,7 +44,7 @@ class qTranslate{
 		/*fix*/ if($root == "./"){ $root = dirname(__FILE__).'/'; }
 		/*collect*/ $q_config = json_decode(file_get_contents($root.(substr($root, -1) != '/' ? '/' : NULL).'settings.json'), TRUE);
 		/*fix*/ if(defined("qTranslate_DEFAULT_LANGUAGE")){ $q_config["default_language"] = qTranslate_DEFAULT_LANGUAGE; }
-		/*fix*/ if(qTranslate::get_language()){ $q_config["language"] = qTranslate::get_language(FALSE); }
+		/*fix*/ if(qTranslate::get_language(FALSE)){ $q_config["language"] = qTranslate::get_language(FALSE); }
 		/*updating*/ if($refresh != FALSE || (isset($this) && isset($this->settings) && is_array($this->settings) && $this->settings == array() ) ){ $this->settings = $q_config; }
 		return $q_config;
 	}
