@@ -11,7 +11,8 @@ class qTranslate{
 	function qTranslate(){}
 	function parse($str, $l=NULL){
 		$blocks = qTranslate::blocks($str, NULL);
-		if($l === NULL){ $l = qTranslate::get_language(FALSE); }
+		//*debug*/ print '<!-- '.print_r($blocks, TRUE).' -->';
+		if($l === NULL){ $l = qTranslate::get_language(TRUE); }
 		$result = NULL;
 		foreach($blocks as $i=>$obj){
 			if(!isset($obj['language']) || $obj['language'] == $l){ $result .= $obj['block']; }
@@ -43,7 +44,7 @@ class qTranslate{
 		/*gather*/ if($refresh === FALSE && (isset($this) && isset($this->settings) && is_array($this->settings) && $this->settings != array() ) ){ return $this->settings; }
 		/*fix*/ if($root == "./"){ $root = dirname(__FILE__).'/'; }
 		/*collect*/ $q_config = json_decode(file_get_contents($root.(substr($root, -1) != '/' ? '/' : NULL).'settings.json'), TRUE);
-		/*fix*/ if(defined("qTranslate_DEFAULT_LANGUAGE")){ $q_config["default_language"] = qTranslate_DEFAULT_LANGUAGE; }
+		/*fix*/ if(defined("qTranslate_DEFAULT_LANGUAGE")){ $q_config["language"] = $q_config["default_language"] = qTranslate_DEFAULT_LANGUAGE; }
 		/*fix*/ if(qTranslate::get_language(FALSE)){ $q_config["language"] = qTranslate::get_language(FALSE); }
 		/*updating*/ if($refresh != FALSE || (isset($this) && isset($this->settings) && is_array($this->settings) && $this->settings == array() ) ){ $this->settings = $q_config; }
 		return $q_config;
@@ -81,13 +82,13 @@ class qTranslate{
 	}
 	function blocks($str, $simpletype=NULL){
 		$json = array();
-		if($simpletype == NULL){ $str = preg_replace("#[<][!][-]{2}[:]([a-z]{2}|[a-z]{2}_[a-z]{2})?[-]{2}[>]#i", "[:\\1]", $str); $simpletype = TRUE; }
+		if($simpletype === NULL){ $str = preg_replace("#[<][!][-]{2}[:]([a-z]{2}|[a-z]{2}_[a-z]{2})?[-]{2}[>]#i", "[:\\1]", $str); $simpletype = TRUE; }
 		if($simpletype === TRUE){
 			$set = explode('[:', $str);
 			foreach($set as $i=>$blob){
 				$json[$i] = array('block' => $blob);
-				if($i>0 && preg_match("#^([a-z]{2}|[a-z]{2}_[a-z]{2})?[\]](.*)$#i", $blob, $buffer)){
-					$json[$i]['block'] = $buffer[2];
+				if($i>0 && preg_match("#^([a-z]{2}|[a-z]{2}_[a-z]{2})?[\]]#i", $blob, $buffer)){ //
+					$json[$i]['block'] = substr($blob, strlen($buffer[1])+1);
 					if(strlen($buffer[1])>0){ $json[$i]['language'] = $buffer[1]; }
 				}
 			}
