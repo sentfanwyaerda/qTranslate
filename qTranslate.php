@@ -88,8 +88,10 @@ class qTranslate{
 			foreach($set as $i=>$blob){
 				$json[$i] = array('block' => $blob);
 				if($i>0 && preg_match("#^([a-z]{2}|[a-z]{2}_[a-z]{2})?[\]]#i", $blob, $buffer)){ //
-					$json[$i]['block'] = substr($blob, strlen($buffer[1])+1);
-					if(strlen($buffer[1])>0){ $json[$i]['language'] = $buffer[1]; }
+					if(isset($buffer[1])){
+						$json[$i]['block'] = substr($blob, strlen($buffer[1])+1);
+						if(strlen($buffer[1])>0){ $json[$i]['language'] = $buffer[1]; }
+					} else { /* [:]-end signal */ }
 				}
 			}
 		}
@@ -119,6 +121,69 @@ class qTranslate{
 			}
 		}
 		return $json;
+	}
+	function multiple_parse($str, $language=NULL, $get_all=FALSE){
+		if(/*($language === NULL || $language == 'any' || $language == '*') &&*/ $get_all === FALSE){ return qTranslate::parse($str, $language); }
+		else{
+			$tree = qTranslate::tree($str);
+			$lset = $all = array();
+			foreach($tree as $i=>$block){
+				if(is_array($block)){ $lset = array_merge($lset, array_keys($block)); }
+			}
+			$lset = array_unique($lset);
+			foreach($lset as $i=>$l){
+				$all[$l] = qTranslate::parse($str, $l);
+			}
+			if($language == 'any'){ $all['any'] = qTranslate::parse($str); }
+			//print "<!-- qTranslate[ ".$str." ] : ".print_r($lset, TRUE).' & '.print_r($all, TRUE)." -->\n";
+			return $all;
+		}
+	}
+	function in_array($needle, $haystack){
+		return (qTranslate::array_search($needle, $haystack) === FALSE ? FALSE : TRUE);
+	}
+	function array_search($needle, $haystack){
+		foreach($haystack as $key=>$value){
+			$set = qTranslate::multiple_parse($value, 'any', TRUE);
+			//*debug*/ print '<!-- '.$key.' := '.$value.' ('.print_r($set, TRUE).') -->'."\n";
+			if(!is_array($value) && !is_object($value) && in_array($needle, $set) ){ return $key; }
+		}
+		//return in_array($needle, $haystack);
+		return FALSE;
+	}
+	function array_search_language($needle, $haystack){
+		foreach($haystack as $key=>$value){
+			$set = qTranslate::multiple_parse($value, 'any', TRUE);
+			//*debug*/ print '<!-- '.$key.' := '.$value.' ('.print_r($set, TRUE).') -->'."\n";
+			if(!is_array($value) && !is_object($value) ){
+				foreach($set as $lang=>$str){
+					if($needle == $str){ return $lang; }
+				}
+			}
+		}
+		//return in_array($needle, $haystack);
+		return FALSE;
+	}
+	function translate($needle, $haystack, $language=NULL){
+		if(isset($haystack[$needle])){ $key = $needle; }
+		else{ $key = qTranslate::array_search($needle, $haystack); }
+		$res = qTranslate::parse($haystack[$key], $language);
+		return ($res == NULL ? $needle : $res);
+	}
+	function url_translate($str, $haystack, $language=NULL){
+		preg_match_all('#href="/([^"?]+)([?][^"]+)?"#i', $str, $buffer);
+		//*debug*/ print '<!-- '.print_r($buffer, TRUE).' -->';
+		foreach($buffer[1] as $i=>$needle){
+			if(preg_match('#([?&])(l|lang|language)=([^&]+)#i', $buffer[2][$i], $bb)){
+				$ltemp = $bb[3]; $lmatch = $bb[0]; $lprefix = $bb[1];
+				//*debug*/ print '<!-- '.print_r($bb, TRUE).' -->';				
+			}
+			else{ $ltemp = NULL; $lmatch = NULL; $lprefix = NULL; }
+			$np = qTranslate::translate($needle, $haystack, ($ltemp == NULL ? $language : $ltemp));
+			$lpostfix = ($needle =! $np || $ltemp == qTranslate::get_language() ? str_replace($lmatch, ($lprefix == '?' && strlen($buffer[2][$i]) > strlen($lmatch) ? '?' : NULL), $buffer[2][$i]) : $buffer[2][$i]);
+			$str = str_replace($buffer[0][$i], 'href="'.$np.$lpostfix.'"', $str);
+		}
+		return $str;
 	}
 }
 ?>
