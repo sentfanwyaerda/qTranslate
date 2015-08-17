@@ -4,6 +4,8 @@ if(!defined("qTranslate_DEFAULT_LANGUAGE")){
 	define("qTranslate_DEFAULT_LANGUAGE", $q_config["default_language"]);
 }
 
+define('qTranslate_LANGUAGE_PATTERN', "([a-z]{2,3}|[a-z]{2,3}[_-][A-Z]{2}|Cy-[a-z]{2}[_-][A-Z]{2}|Lt-[a-z]{2}[_-][A-Z]{2})");
+
 class qTranslate{
 	var $language = NULL;
 	var $settings = array();
@@ -82,16 +84,20 @@ class qTranslate{
 	}
 	function blocks($str, $simpletype=NULL){
 		$json = array();
-		if($simpletype === NULL){ $str = preg_replace("#[<][!][-]{2}[:]([a-z]{2}|[a-z]{2}_[a-z]{2})?[-]{2}[>]#i", "[:\\1]", $str); $simpletype = TRUE; }
+		if($simpletype === NULL){ $str = preg_replace("#[<][!][-]{2}[:]".qTranslate_LANGUAGE_PATTERN."?([\*!])?[-]{2}[>]#i", "[:\\1\\2]", $str); $simpletype = TRUE; }
 		if($simpletype === TRUE){
 			$set = explode('[:', $str);
 			foreach($set as $i=>$blob){
 				$json[$i] = array('block' => $blob);
-				if($i>0 && preg_match("#^([a-z]{2}|[a-z]{2}_[a-z]{2})?[\]]#i", $blob, $buffer)){ //
+				if($i>0 && preg_match("#^".qTranslate_LANGUAGE_PATTERN."?[\]]#i", $blob, $buffer)){ //
 					if(isset($buffer[1])){
 						$json[$i]['block'] = substr($blob, strlen($buffer[1])+1);
 						if(strlen($buffer[1])>0){ $json[$i]['language'] = $buffer[1]; }
-					} else { /* [:]-end signal */ }
+					} else {
+						/* [:]-end signal */
+						$json[$i]['block'] = substr($blob, 1);
+						$json[$i]['language'] = NULL;
+					}
 				}
 			}
 		}
@@ -99,7 +105,7 @@ class qTranslate{
 			$set = explode('<!--:', $str);
 			foreach($set as $i=>$blob){
 				$json[$i] = array('block' => $blob);
-				if($i>0 && preg_match("#^([a-z]{2}|[a-z]{2}_[a-z]{2})?[-]{2}[>](.*)$#i", $blob, $buffer)){
+				if($i>0 && preg_match("#^(".qTranslate_LANGUAGE_PATTERN.")?[-]{2}[>](.*)$#i", $blob, $buffer)){
 					$json[$i]['block'] = $buffer[2];
 					if(strlen($buffer[1])>0){ $json[$i]['language'] = $buffer[1]; }
 				}
